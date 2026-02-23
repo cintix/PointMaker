@@ -1,18 +1,21 @@
 using System.Collections.Generic;
+using Cintix.SegmentPath.Core;
 using UnityEditor;
 using UnityEngine;
 using Cintix.SegmentPath.Runtime;
 
 namespace Cintix.SegmentPath.Editor
 {
+    
     [CustomEditor(typeof(PointMaker))]
     public class PointMakerEditor : UnityEditor.Editor
     {
+        private SegmentLayout segmentLayout = new();
         private PointMaker maker;
         private Ray ray;
         private RaycastHit hit;
         private bool toolsWereHidden;
-        
+
         private void OnEnable()
         {
             maker = target as PointMaker;
@@ -36,7 +39,11 @@ namespace Cintix.SegmentPath.Editor
             EditorGUILayout.Space();
             DrawDefaultInspectorExceptModeAndPrefabs();
 
-            serializedObject.ApplyModifiedProperties();
+            if (serializedObject.ApplyModifiedProperties())
+            {
+                segmentLayout.SyncSegments(maker);
+            }
+            
         }
         
         private void DrawPrefabConfiguration()
@@ -256,6 +263,7 @@ namespace Cintix.SegmentPath.Editor
                 );
 
                 maker.AddPoint(hit.point, rotation);
+                segmentLayout.SyncSegments(maker);
                 guiEvent.Use();
             }
 
@@ -263,6 +271,7 @@ namespace Cintix.SegmentPath.Editor
             {
                 Undo.RecordObject(maker, "Remove Points");
                 maker.RemovePointsNear(hit.point, maker.RemoveBrushRadius);
+                segmentLayout.SyncSegments(maker);
                 guiEvent.Use();
             }
         }
@@ -301,6 +310,7 @@ namespace Cintix.SegmentPath.Editor
                         Undo.RecordObject(maker, "Move Point");
                         p.Position = newPos;
                         maker.Points[i] = p;
+                        segmentLayout.SyncSegments(maker);
                     }
 
                     if (maker.DrawPointNormals)
