@@ -25,10 +25,9 @@ namespace Cintix.SegmentPath.Core
             Transform root = GetOrCreateSegmentRoot(maker);
             
             SegmentPool ??= new PrefabPool(prefab, root);
-            Debug.Log( SegmentPool.Prefab.gameObject.name + " VS " + prefab.gameObject.name );
-            if (prefab != SegmentPool.Prefab)
+            
+            if (PrefabChanged(root, prefab))
             {
-                Debug.LogWarning($"Segment prefab changed from {SegmentPool.Prefab.name} to {prefab.name}");
                 SegmentPool.Clear();
                 SegmentPool.Set(prefab, root);
             }
@@ -42,6 +41,22 @@ namespace Cintix.SegmentPath.Core
                 instance.position = maker.Points[index].Position;
                 instance.rotation = maker.Points[index].Rotation;
             }
+        }
+
+        private bool PrefabChanged(Transform root, GameObject prefab)
+        {
+            if (root.childCount == 0)
+                return true;
+
+            for (int index = 0; index < root.childCount; index++)
+            {
+                var child = root.GetChild(index).gameObject;
+                var source = PrefabUtility.GetCorrespondingObjectFromSource(child);
+                if (source == null || source != prefab)
+                    return true;
+            }
+
+            return false;
         }
 
         [CanBeNull]

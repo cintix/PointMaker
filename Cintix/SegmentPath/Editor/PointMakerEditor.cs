@@ -55,6 +55,7 @@ namespace Cintix.SegmentPath.Editor
             if (serializedObject.ApplyModifiedProperties())
             {
                 Debug.Log("Applying modified properties");
+                serializedObject.Update();
                 segmentLayout.SyncSegments(maker);
             }
         }
