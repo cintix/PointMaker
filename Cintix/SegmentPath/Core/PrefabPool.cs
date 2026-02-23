@@ -1,3 +1,5 @@
+using UnityEditor;
+
 namespace Cintix.SegmentPath.Core
 {
     using System.Collections.Generic;
@@ -8,6 +10,8 @@ namespace Cintix.SegmentPath.Core
         private GameObject prefab;
         private Transform parent;
 
+        public GameObject Prefab => prefab;
+        
         private readonly List<GameObject> instances = new();
 
         public PrefabPool(GameObject prefab, Transform parent)
@@ -33,7 +37,7 @@ namespace Cintix.SegmentPath.Core
             // Add missing
             while (instances.Count < targetCount)
             {
-                var go = Object.Instantiate(prefab, parent);
+                var go = (GameObject) PrefabUtility.InstantiatePrefab(prefab, parent);
                 instances.Add(go);
             }
 

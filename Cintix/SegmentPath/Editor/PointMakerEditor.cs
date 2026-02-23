@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Cintix.SegmentPath.Core;
 using UnityEditor;
 using UnityEngine;
@@ -6,7 +5,6 @@ using Cintix.SegmentPath.Runtime;
 
 namespace Cintix.SegmentPath.Editor
 {
-    
     [CustomEditor(typeof(PointMaker))]
     public class PointMakerEditor : UnityEditor.Editor
     {
@@ -14,14 +12,29 @@ namespace Cintix.SegmentPath.Editor
         private PointMaker maker;
         private Ray ray;
         private RaycastHit hit;
-        private bool toolsWereHidden;
+
+        // Serialized properties
+        private SerializedProperty modeProp;
+        private SerializedProperty segmentsProp;
+        private SerializedProperty railsProp;
+        private SerializedProperty defaultSegmentProp;
+        private SerializedProperty defaultRailProp;
+        private SerializedProperty firstSegmentProp;
+        private SerializedProperty lastSegmentProp;
 
         private void OnEnable()
         {
             maker = target as PointMaker;
-            toolsWereHidden = Tools.hidden;
+
+            modeProp = serializedObject.FindProperty("mode");
+            segmentsProp = serializedObject.FindProperty("segments");
+            railsProp = serializedObject.FindProperty("rails");
+            defaultSegmentProp = serializedObject.FindProperty("defaultSegmentIndex");
+            defaultRailProp = serializedObject.FindProperty("defaultRailIndex");
+            firstSegmentProp = serializedObject.FindProperty("firstSegmentIndex");
+            lastSegmentProp = serializedObject.FindProperty("lastSegmentIndex");
         }
-        
+
         private void OnDisable()
         {
             Tools.hidden = false;
@@ -35,51 +48,52 @@ namespace Cintix.SegmentPath.Editor
             EditorGUILayout.Space();
 
             DrawPrefabConfiguration();
-
             EditorGUILayout.Space();
+
             DrawDefaultInspectorExceptModeAndPrefabs();
 
             if (serializedObject.ApplyModifiedProperties())
             {
+                Debug.Log("Applying modified properties");
                 segmentLayout.SyncSegments(maker);
             }
-            
         }
-        
+
         private void DrawPrefabConfiguration()
         {
             EditorGUILayout.LabelField("Prefabs Configuration", EditorStyles.boldLabel);
             EditorGUILayout.Space(5);
 
-            DrawPrefabList("Segments", maker.Segments);
+            DrawPrefabList("Segments", segmentsProp);
             EditorGUILayout.Space();
 
-            DrawPrefabList("Rails", maker.Rails);
+            DrawPrefabList("Rails", railsProp);
             EditorGUILayout.Space(10);
 
             DrawSegmentDropdowns();
             EditorGUILayout.Space();
             DrawRailDropdown();
         }
-        
-        private void DrawPrefabList(string label, List<GameObject> list)
+
+        private void DrawPrefabList(string label, SerializedProperty listProp)
         {
             EditorGUILayout.LabelField(label, EditorStyles.boldLabel);
 
             int removeIndex = -1;
 
-            for (int i = 0; i < list.Count; i++)
+            for (int i = 0; i < listProp.arraySize; i++)
             {
+                SerializedProperty element = listProp.GetArrayElementAtIndex(i);
+
                 GUILayout.BeginHorizontal("box");
 
-                Texture2D preview = AssetPreview.GetAssetPreview(list[i]);
+                Texture2D preview = AssetPreview.GetAssetPreview(
+                    element.objectReferenceValue
+                );
+
                 GUILayout.Label(preview, GUILayout.Width(60), GUILayout.Height(60));
 
-                list[i] = (GameObject)EditorGUILayout.ObjectField(
-                    list[i],
-                    typeof(GameObject),
-                    false
-                );
+                EditorGUILayout.PropertyField(element, GUIContent.none);
 
                 if (GUILayout.Button("X", GUILayout.Width(25)))
                 {
@@ -91,65 +105,75 @@ namespace Cintix.SegmentPath.Editor
 
             if (removeIndex >= 0)
             {
-                Undo.RecordObject(maker, "Remove Prefab");
-                list.RemoveAt(removeIndex);
+                listProp.DeleteArrayElementAtIndex(removeIndex);
             }
 
             if (GUILayout.Button($"Add {label}"))
             {
-                Undo.RecordObject(maker, "Add Prefab");
-                list.Add(null);
+                listProp.InsertArrayElementAtIndex(listProp.arraySize);
             }
         }
-        
+
         private void DrawSegmentDropdowns()
         {
-            string[] segmentNames = maker.Segments.Count > 0
-                ? maker.Segments.ConvertAll(s => s != null ? s.name : "None").ToArray()
-                : new string[] { "None" };
-
-            if (maker.Segments.Count == 0)
+            if (segmentsProp.arraySize == 0)
                 return;
+
+            string[] segmentNames = new string[segmentsProp.arraySize];
+
+            for (int i = 0; i < segmentsProp.arraySize; i++)
+            {
+                var element = segmentsProp.GetArrayElementAtIndex(i);
+                segmentNames[i] = element.objectReferenceValue != null
+                    ? element.objectReferenceValue.name
+                    : "None";
+            }
 
             EditorGUILayout.LabelField("Segment Selection", EditorStyles.boldLabel);
 
-            maker.DefaultSegmentIndex = EditorGUILayout.Popup(
+            defaultSegmentProp.intValue = EditorGUILayout.Popup(
                 "Default Segment",
-                Mathf.Clamp(maker.DefaultSegmentIndex, 0, maker.Segments.Count - 1),
+                Mathf.Clamp(defaultSegmentProp.intValue, 0, segmentsProp.arraySize - 1),
                 segmentNames
             );
 
-            maker.FirstSegmentIndex = EditorGUILayout.Popup(
+            firstSegmentProp.intValue = EditorGUILayout.Popup(
                 "First Segment",
-                Mathf.Clamp(maker.FirstSegmentIndex, 0, maker.Segments.Count - 1),
+                Mathf.Clamp(firstSegmentProp.intValue, 0, segmentsProp.arraySize - 1),
                 segmentNames
             );
 
-            maker.LastSegmentIndex = EditorGUILayout.Popup(
+            lastSegmentProp.intValue = EditorGUILayout.Popup(
                 "Last Segment",
-                Mathf.Clamp(maker.LastSegmentIndex, 0, maker.Segments.Count - 1),
+                Mathf.Clamp(lastSegmentProp.intValue, 0, segmentsProp.arraySize - 1),
                 segmentNames
             );
         }
-        
+
         private void DrawRailDropdown()
         {
-            string[] railNames = maker.Rails.Count > 0
-                ? maker.Rails.ConvertAll(r => r != null ? r.name : "None").ToArray()
-                : new string[] { "None" };
-
-            if (maker.Rails.Count == 0)
+            if (railsProp.arraySize == 0)
                 return;
+
+            string[] railNames = new string[railsProp.arraySize];
+
+            for (int i = 0; i < railsProp.arraySize; i++)
+            {
+                var element = railsProp.GetArrayElementAtIndex(i);
+                railNames[i] = element.objectReferenceValue != null
+                    ? element.objectReferenceValue.name
+                    : "None";
+            }
 
             EditorGUILayout.LabelField("Rail Selection", EditorStyles.boldLabel);
 
-            maker.DefaultRailIndex = EditorGUILayout.Popup(
+            defaultRailProp.intValue = EditorGUILayout.Popup(
                 "Default Rail",
-                Mathf.Clamp(maker.DefaultRailIndex, 0, maker.Rails.Count - 1),
+                Mathf.Clamp(defaultRailProp.intValue, 0, railsProp.arraySize - 1),
                 railNames
             );
         }
-        
+
         private void DrawDefaultInspectorExceptModeAndPrefabs()
         {
             SerializedProperty prop = serializedObject.GetIterator();
@@ -169,52 +193,17 @@ namespace Cintix.SegmentPath.Editor
                 EditorGUILayout.PropertyField(prop, true);
             }
         }
-        
+
         private void DrawModeToolbar()
         {
             EditorGUILayout.LabelField("Mode", EditorStyles.boldLabel);
 
-            PointMakerMode current = maker.Mode;
-
-            EditorGUI.BeginChangeCheck();
-
-            int selected = GUILayout.Toolbar(
-                (int)current,
+            modeProp.enumValueIndex = GUILayout.Toolbar(
+                modeProp.enumValueIndex,
                 new string[] { "None", "Edit", "Move" }
             );
-
-            if (EditorGUI.EndChangeCheck())
-            {
-                Undo.RecordObject(maker, "Change PointMaker Mode");
-                maker.Mode = (PointMakerMode)selected;
-                EditorUtility.SetDirty(maker);
-            }
         }
-        
-        private void SetMode(PointMakerMode newMode)
-        {
-            if (maker.Mode == newMode)
-                return;
 
-            Undo.RecordObject(maker, "Change PointMaker Mode");
-            maker.Mode = newMode;
-            EditorUtility.SetDirty(maker);
-        }
-        
-        private void DrawDefaultInspectorExceptMode()
-        {
-            SerializedProperty prop = serializedObject.GetIterator();
-            prop.NextVisible(true);
-
-            while (prop.NextVisible(false))
-            {
-                if (prop.name == "mode")
-                    continue;
-
-                EditorGUILayout.PropertyField(prop, true);
-            }
-        }
-        
         private void OnSceneGUI()
         {
             if (maker == null)
@@ -227,7 +216,7 @@ namespace Cintix.SegmentPath.Editor
                 Tools.hidden = false;
                 return;
             }
-            
+
             Event guiEvent = Event.current;
 
             ray = HandleUtility.GUIPointToWorldRay(guiEvent.mousePosition);

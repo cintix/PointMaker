@@ -25,6 +25,14 @@ namespace Cintix.SegmentPath.Core
             Transform root = GetOrCreateSegmentRoot(maker);
             
             SegmentPool ??= new PrefabPool(prefab, root);
+            Debug.Log( SegmentPool.Prefab.gameObject.name + " VS " + prefab.gameObject.name );
+            if (prefab != SegmentPool.Prefab)
+            {
+                Debug.LogWarning($"Segment prefab changed from {SegmentPool.Prefab.name} to {prefab.name}");
+                SegmentPool.Clear();
+                SegmentPool.Set(prefab, root);
+            }
+            
             SegmentPool.EnsureCount(maker.Points.Count);
             
             for (int index = 0; index < maker.Points.Count; index++)
