@@ -44,6 +44,27 @@ namespace Cintix.SegmentPath
         public Color PointColor => pointColor;
         public bool DrawPointNormals => drawPointNormals;
 
+        [Header("Prefabs Configuration")]
+
+        [SerializeField] private List<GameObject> segments = new();
+        [SerializeField] private List<GameObject> rails = new();
+
+        [SerializeField] private int defaultSegmentIndex = 0;
+        [SerializeField] private int defaultRailIndex = 0;
+
+        [SerializeField] private int firstSegmentIndex = 0;
+        [SerializeField] private int lastSegmentIndex = 0;
+
+        public List<GameObject> Segments => segments;
+        public List<GameObject> Rails => rails;
+
+        public int DefaultSegmentIndex { get => defaultSegmentIndex; set => defaultSegmentIndex = value; }
+        public int DefaultRailIndex { get => defaultRailIndex; set => defaultRailIndex = value; }
+
+        public int FirstSegmentIndex { get => firstSegmentIndex; set => firstSegmentIndex = value; }
+        public int LastSegmentIndex { get => lastSegmentIndex; set => lastSegmentIndex = value; }
+        
+        
         [SerializeField] private List<PointData> points = new();
         public List<PointData> Points => points;
 

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using Cintix.SegmentPath.Runtime;
@@ -28,12 +29,138 @@ namespace Cintix.SegmentPath.Editor
             serializedObject.Update();
 
             DrawModeToolbar();
-
             EditorGUILayout.Space();
 
-            DrawDefaultInspectorExceptMode();
+            DrawPrefabConfiguration();
+
+            EditorGUILayout.Space();
+            DrawDefaultInspectorExceptModeAndPrefabs();
 
             serializedObject.ApplyModifiedProperties();
+        }
+        
+        private void DrawPrefabConfiguration()
+        {
+            EditorGUILayout.LabelField("Prefabs Configuration", EditorStyles.boldLabel);
+            EditorGUILayout.Space(5);
+
+            DrawPrefabList("Segments", maker.Segments);
+            EditorGUILayout.Space();
+
+            DrawPrefabList("Rails", maker.Rails);
+            EditorGUILayout.Space(10);
+
+            DrawSegmentDropdowns();
+            EditorGUILayout.Space();
+            DrawRailDropdown();
+        }
+        
+        private void DrawPrefabList(string label, List<GameObject> list)
+        {
+            EditorGUILayout.LabelField(label, EditorStyles.boldLabel);
+
+            int removeIndex = -1;
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                GUILayout.BeginHorizontal("box");
+
+                Texture2D preview = AssetPreview.GetAssetPreview(list[i]);
+                GUILayout.Label(preview, GUILayout.Width(60), GUILayout.Height(60));
+
+                list[i] = (GameObject)EditorGUILayout.ObjectField(
+                    list[i],
+                    typeof(GameObject),
+                    false
+                );
+
+                if (GUILayout.Button("X", GUILayout.Width(25)))
+                {
+                    removeIndex = i;
+                }
+
+                GUILayout.EndHorizontal();
+            }
+
+            if (removeIndex >= 0)
+            {
+                Undo.RecordObject(maker, "Remove Prefab");
+                list.RemoveAt(removeIndex);
+            }
+
+            if (GUILayout.Button($"Add {label}"))
+            {
+                Undo.RecordObject(maker, "Add Prefab");
+                list.Add(null);
+            }
+        }
+        
+        private void DrawSegmentDropdowns()
+        {
+            string[] segmentNames = maker.Segments.Count > 0
+                ? maker.Segments.ConvertAll(s => s != null ? s.name : "None").ToArray()
+                : new string[] { "None" };
+
+            if (maker.Segments.Count == 0)
+                return;
+
+            EditorGUILayout.LabelField("Segment Selection", EditorStyles.boldLabel);
+
+            maker.DefaultSegmentIndex = EditorGUILayout.Popup(
+                "Default Segment",
+                Mathf.Clamp(maker.DefaultSegmentIndex, 0, maker.Segments.Count - 1),
+                segmentNames
+            );
+
+            maker.FirstSegmentIndex = EditorGUILayout.Popup(
+                "First Segment",
+                Mathf.Clamp(maker.FirstSegmentIndex, 0, maker.Segments.Count - 1),
+                segmentNames
+            );
+
+            maker.LastSegmentIndex = EditorGUILayout.Popup(
+                "Last Segment",
+                Mathf.Clamp(maker.LastSegmentIndex, 0, maker.Segments.Count - 1),
+                segmentNames
+            );
+        }
+        
+        private void DrawRailDropdown()
+        {
+            string[] railNames = maker.Rails.Count > 0
+                ? maker.Rails.ConvertAll(r => r != null ? r.name : "None").ToArray()
+                : new string[] { "None" };
+
+            if (maker.Rails.Count == 0)
+                return;
+
+            EditorGUILayout.LabelField("Rail Selection", EditorStyles.boldLabel);
+
+            maker.DefaultRailIndex = EditorGUILayout.Popup(
+                "Default Rail",
+                Mathf.Clamp(maker.DefaultRailIndex, 0, maker.Rails.Count - 1),
+                railNames
+            );
+        }
+        
+        private void DrawDefaultInspectorExceptModeAndPrefabs()
+        {
+            SerializedProperty prop = serializedObject.GetIterator();
+            prop.NextVisible(true);
+
+            while (prop.NextVisible(false))
+            {
+                if (prop.name == "mode" ||
+                    prop.name == "segments" ||
+                    prop.name == "rails" ||
+                    prop.name == "defaultSegmentIndex" ||
+                    prop.name == "defaultRailIndex" ||
+                    prop.name == "firstSegmentIndex" ||
+                    prop.name == "lastSegmentIndex")
+                    continue;
+
+                EditorGUILayout.PropertyField(prop, true);
+            }
         }
         
         private void DrawModeToolbar()
