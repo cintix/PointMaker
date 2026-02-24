@@ -32,7 +32,6 @@ namespace Cintix.SegmentPath
         public bool ShowPreview => showPreview;
         public float PreviewSizeMultiplier => previewSizeMultiplier;
         public Color PreviewColor => previewColor;
-
         [Header("Point Visualization")]
         [SerializeField] private bool showPoints = true;
         [SerializeField] private float pointDrawSize = 0.1f;
@@ -55,6 +54,15 @@ namespace Cintix.SegmentPath
         [SerializeField] private int firstSegmentIndex = 0;
         [SerializeField] private int lastSegmentIndex = 0;
 
+        [SerializeField] private float segmentSpacing = 3f;
+        [SerializeField] private float railsOffset = 0f;
+        [SerializeField] private float railsInsert = 0f;
+        
+        public float SegmentSpacing => segmentSpacing;
+        public float RailsOffset => railsOffset;
+        public float RailsInserts => railsInsert;
+
+        
         public List<GameObject> Segments => segments;
         public List<GameObject> Rails => rails;
 

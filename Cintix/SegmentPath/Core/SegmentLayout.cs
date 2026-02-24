@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using JetBrains.Annotations;
 using UnityEditor;
 using UnityEngine;
@@ -32,14 +33,17 @@ namespace Cintix.SegmentPath.Core
                 SegmentPool.Set(prefab, root);
             }
             
-            SegmentPool.EnsureCount(maker.Points.Count);
+            var tempPointsMap = BuildTemporaryPointMap(maker);
+            Debug.Log(maker.Points.Count + " vs " + tempPointsMap.Count);
             
-            for (int index = 0; index < maker.Points.Count; index++)
+            SegmentPool.EnsureCount(tempPointsMap.Count);
+            
+            for (int index = 0; index < tempPointsMap.Count; index++)
             {
                 Transform instance = SegmentPool[index].transform;
                 
-                instance.position = maker.Points[index].Position;
-                instance.rotation = maker.Points[index].Rotation;
+                instance.position = tempPointsMap[index].Position;
+                instance.rotation = tempPointsMap[index].Rotation;
             }
         }
 
@@ -89,5 +93,87 @@ namespace Cintix.SegmentPath.Core
             return root;
         }
         
+        private List<PointData> BuildTemporaryPointMap(PointMaker maker)
+        {
+            var map = new List<PointData>();
+
+            if (maker.Points.Count == 0)
+                return map;
+
+            float spacing = maker.SegmentSpacing;
+
+            for (int i = 0; i < maker.Points.Count - 1; i++)
+            {
+                var current = maker.Points[i];
+                var next = maker.Points[i + 1];
+
+                map.Add(current);
+
+                Vector3 dir = next.Position - current.Position;
+                float distance = dir.magnitude;
+
+                if (distance <= Mathf.Epsilon) continue;
+
+                Vector3 direction = dir.normalized;
+                int segmentCount = CalculateSegmentCount(distance, spacing);
+
+                for (int segmentIndex = 0; segmentIndex < segmentCount; segmentIndex++)
+                {
+                    float forwardPlacement = spacing * (segmentIndex + 1);
+                    Vector3 rawPosition = current.Position + direction * forwardPlacement;
+
+                    // Use current surface orientation
+                    Vector3 surfaceNormal = current.Rotation * Vector3.up;
+
+                    ProjectToSurface(rawPosition, surfaceNormal, maker.RaycastLayers, out var grounded, out var normal);
+
+                    Vector3 projectedForward = Vector3.ProjectOnPlane(Vector3.forward, normal).normalized;
+                    Quaternion rotation = Quaternion.LookRotation(projectedForward, normal);
+
+                    map.Add(new PointData(grounded, rotation));
+                }
+            }
+
+            int lastIndex = maker.Points.Count - 1;
+            map.Add(maker.Points[lastIndex]);
+
+            return map;
+        }
+        
+        private bool ProjectToSurface(Vector3 position, Vector3 surfaceNormal, LayerMask layers, out Vector3 groundedPosition, out Vector3 hitNormal)
+        {
+            const float rayOffset = 0.5f;
+            const float rayDistance = 5f;
+
+            Vector3 rayOrigin = position + surfaceNormal * rayOffset;
+            Vector3 rayDirection = -surfaceNormal;
+
+            Ray ray = new Ray(rayOrigin, rayDirection);
+
+            if (Physics.Raycast(ray, out RaycastHit hit, rayDistance, layers))
+            {
+                groundedPosition = hit.point;
+                hitNormal = hit.normal;
+                return true;
+            }
+
+            groundedPosition = position;
+            hitNormal = surfaceNormal;
+            return false;
+        }
+        
+        private int CalculateSegmentCount(float distance, float spacing)
+        {
+            if (spacing <= 0f)
+                return 0;
+
+            int full = Mathf.FloorToInt(distance / spacing);
+            float remainder = distance - (full * spacing);
+
+            if (remainder > 0f && remainder < spacing * 0.5f)
+                full--;
+
+            return Mathf.Max(0, full);
+        }
     }
 }

@@ -183,6 +183,9 @@ namespace Cintix.SegmentPath.Editor
             while (prop.NextVisible(false))
             {
                 if (prop.name == "mode" ||
+                    prop.name == "segmentSpacing" ||
+                    prop.name == "railsOffset" ||
+                    prop.name == "railsInsert" ||
                     prop.name == "segments" ||
                     prop.name == "rails" ||
                     prop.name == "defaultSegmentIndex" ||
@@ -203,6 +206,13 @@ namespace Cintix.SegmentPath.Editor
                 modeProp.enumValueIndex,
                 new string[] { "None", "Edit", "Move" }
             );
+            
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Spacing & Rails", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("segmentSpacing"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("railsOffset"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("railsInsert"));
+            EditorGUILayout.Space();            
         }
 
         private void OnSceneGUI()
