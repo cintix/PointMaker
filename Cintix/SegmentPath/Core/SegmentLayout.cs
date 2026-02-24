@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Cintix.Fence.Core;
 using JetBrains.Annotations;
 using UnityEditor;
 using UnityEngine;
@@ -7,6 +8,7 @@ namespace Cintix.SegmentPath.Core
 {
     public class SegmentLayout
     {
+        private RailsLayout _railsLayout = new();
         private const string SegmentRootName = "Segments";
         private PrefabPool _segmentPool;
         
@@ -27,16 +29,16 @@ namespace Cintix.SegmentPath.Core
             
             _segmentPool ??= new PrefabPool(prefab, root);
             
-            if (PrefabChanged(root, prefab))
+            if (PrefabUtil.PrefabChanged(root, prefab))
             {
                 _segmentPool.Clear();
                 _segmentPool.Set(prefab, root);
             }
             
             var tempPointsMap = BuildTemporaryPointMap(maker);
-            Debug.Log(maker.Points.Count + " vs " + tempPointsMap.Count);
-            
             _segmentPool.EnsureCount(tempPointsMap.Count);
+            
+            _railsLayout.SyncRails(maker, tempPointsMap);
             
             for (int index = 0; index < tempPointsMap.Count; index++)
             {
@@ -46,23 +48,7 @@ namespace Cintix.SegmentPath.Core
                 instance.rotation = tempPointsMap[index].Rotation;
             }
         }
-
-        private bool PrefabChanged(Transform root, GameObject prefab)
-        {
-            if (root.childCount == 0)
-                return true;
-
-            for (int index = 0; index < root.childCount; index++)
-            {
-                var child = root.GetChild(index).gameObject;
-                var source = PrefabUtility.GetCorrespondingObjectFromSource(child);
-                if (source == null || source != prefab)
-                    return true;
-            }
-
-            return false;
-        }
-
+        
         [CanBeNull]
         private Transform GetChildGroupName(PointMaker maker, string name)
         {
@@ -76,7 +62,6 @@ namespace Cintix.SegmentPath.Core
         
         private Transform GetOrCreateSegmentRoot(PointMaker maker)
         {
-            
             Transform root = GetChildGroupName(maker, SegmentRootName);
 
             if (root == null)
@@ -96,16 +81,15 @@ namespace Cintix.SegmentPath.Core
         private List<PointData> BuildTemporaryPointMap(PointMaker maker)
         {
             var map = new List<PointData>();
-
-            if (maker.Points.Count == 0)
-                return map;
+            
+            if (maker.Points.Count == 0) return map;
 
             float spacing = maker.SegmentSpacing;
 
-            for (int i = 0; i < maker.Points.Count - 1; i++)
+            for (int index = 0; index < maker.Points.Count - 1; index++)
             {
-                var current = maker.Points[i];
-                var next = maker.Points[i + 1];
+                var current = maker.Points[index];
+                var next = maker.Points[index + 1];
 
                 map.Add(current);
 
@@ -163,8 +147,7 @@ namespace Cintix.SegmentPath.Core
         
         private int CalculateSegmentCount(float distance, float spacing)
         {
-            if (spacing <= 0f)
-                return 0;
+            if (spacing <= 0f) return 0;
 
             int full = Mathf.FloorToInt(distance / spacing);
             float remainder = distance - (full * spacing);
