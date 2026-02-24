@@ -7,8 +7,8 @@ namespace Cintix.SegmentPath.Core
 {
     public class SegmentLayout
     {
-        private const string SEGMENT_ROOT_NAME = "Segments";
-        private PrefabPool SegmentPool;
+        private const string SegmentRootName = "Segments";
+        private PrefabPool _segmentPool;
         
         public void SyncSegments(PointMaker maker)
         {
@@ -25,22 +25,22 @@ namespace Cintix.SegmentPath.Core
 
             Transform root = GetOrCreateSegmentRoot(maker);
             
-            SegmentPool ??= new PrefabPool(prefab, root);
+            _segmentPool ??= new PrefabPool(prefab, root);
             
             if (PrefabChanged(root, prefab))
             {
-                SegmentPool.Clear();
-                SegmentPool.Set(prefab, root);
+                _segmentPool.Clear();
+                _segmentPool.Set(prefab, root);
             }
             
             var tempPointsMap = BuildTemporaryPointMap(maker);
             Debug.Log(maker.Points.Count + " vs " + tempPointsMap.Count);
             
-            SegmentPool.EnsureCount(tempPointsMap.Count);
+            _segmentPool.EnsureCount(tempPointsMap.Count);
             
             for (int index = 0; index < tempPointsMap.Count; index++)
             {
-                Transform instance = SegmentPool[index].transform;
+                Transform instance = _segmentPool[index].transform;
                 
                 instance.position = tempPointsMap[index].Position;
                 instance.rotation = tempPointsMap[index].Rotation;
@@ -77,11 +77,11 @@ namespace Cintix.SegmentPath.Core
         private Transform GetOrCreateSegmentRoot(PointMaker maker)
         {
             
-            Transform root = GetChildGroupName(maker, SEGMENT_ROOT_NAME);
+            Transform root = GetChildGroupName(maker, SegmentRootName);
 
             if (root == null)
             {
-                GameObject go = new GameObject(SEGMENT_ROOT_NAME);
+                GameObject go = new GameObject(SegmentRootName);
                 Undo.RegisterCreatedObjectUndo(go, "Create Segment Root");
                 go.transform.SetParent(maker.transform);
                 go.transform.localPosition = Vector3.zero;
@@ -120,9 +120,8 @@ namespace Cintix.SegmentPath.Core
                 for (int segmentIndex = 0; segmentIndex < segmentCount; segmentIndex++)
                 {
                     float forwardPlacement = spacing * (segmentIndex + 1);
+                    
                     Vector3 rawPosition = current.Position + direction * forwardPlacement;
-
-                    // Use current surface orientation
                     Vector3 surfaceNormal = current.Rotation * Vector3.up;
 
                     ProjectToSurface(rawPosition, surfaceNormal, maker.RaycastLayers, out var grounded, out var normal);
