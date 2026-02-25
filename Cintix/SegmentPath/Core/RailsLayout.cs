@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Cintix.Fence.Core;
+using Cintix.SegmentPath.Runtime;
 using UnityEditor;
 using UnityEngine;
 

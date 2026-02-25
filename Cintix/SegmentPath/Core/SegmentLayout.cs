@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Cintix.Fence.Core;
+using Cintix.SegmentPath.Runtime;
 using JetBrains.Annotations;
 using UnityEditor;
 using UnityEngine;
@@ -26,7 +27,6 @@ namespace Cintix.SegmentPath.Core
                 return;
 
             Transform root = GetOrCreateSegmentRoot(maker);
-            
             _segmentPool ??= new PrefabPool(prefab, root);
             
             if (PrefabUtil.PrefabChanged(root, prefab))

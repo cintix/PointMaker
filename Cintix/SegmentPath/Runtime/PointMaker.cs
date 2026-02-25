@@ -1,9 +1,8 @@
-using System;
 using System.Collections.Generic;
-using Cintix.SegmentPath.Runtime;
+using Cintix.SegmentPath.Core;
 using UnityEngine;
 
-namespace Cintix.SegmentPath
+namespace Cintix.SegmentPath.Runtime
 {
 
     [ExecuteAlways]
@@ -85,19 +84,6 @@ namespace Cintix.SegmentPath
         {
             float sqr = radius * radius;
             points.RemoveAll(p => (p.Position - position).sqrMagnitude <= sqr);
-        }
-    }
-
-    [Serializable]
-    public struct PointData
-    {
-        public Vector3 Position;
-        public Quaternion Rotation;
-
-        public PointData(Vector3 position, Quaternion rotation)
-        {
-            Position = position;
-            Rotation = rotation;
         }
     }
 }

@@ -1,4 +1,4 @@
-namespace Cintix.SegmentPath.Runtime
+namespace Cintix.SegmentPath.Core
 {
     public enum PointMakerMode
     {
