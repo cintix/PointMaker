@@ -98,7 +98,7 @@ namespace Cintix.SegmentPath.Core
                var next = segments[index + 1];
 
                int railsToPlace  = GetRailsBetweenPoints(prefab, current, next);
-               map.AddRange(PlaceRailsBetweenPoints(prefab, current, next, railsToPlace));
+               map.AddRange(PlaceRailsBetweenPoints(prefab, current, next, railsToPlace, maker.RailsOffset));
            }
 
            return map;           
@@ -112,7 +112,7 @@ namespace Cintix.SegmentPath.Core
             return railCount;
         }
 
-        private List<PointData> PlaceRailsBetweenPoints(GameObject prefab, PointData a, PointData b, int railCount)
+        private List<PointData> PlaceRailsBetweenPoints(GameObject prefab, PointData a, PointData b, int railCount, float railsOffset)
         {
             var map = new List<PointData>();
 
@@ -128,11 +128,14 @@ namespace Cintix.SegmentPath.Core
             for (int index = 0; index < railCount; index++)
             {
                 float normalizedPosition = railCount == 1 ? 0f : (float)index / (railCount - 1);
+                
                 Vector3 pos = Vector3.Lerp(firstPos, lastPos, normalizedPosition);
                 Vector3 normal = Vector3.Slerp(a.Rotation * Vector3.up, b.Rotation * Vector3.up, normalizedPosition).normalized;
-                Quaternion rot = Quaternion.LookRotation(direction, normal);
+                Quaternion rotation = Quaternion.LookRotation(direction, normal);
+                
+                pos += normal * railsOffset;
 
-                map.Add(new PointData(pos, rot));
+                map.Add(new PointData(pos, rotation));
             }
 
             return map;

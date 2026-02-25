@@ -38,8 +38,6 @@ namespace Cintix.SegmentPath.Core
             var tempPointsMap = BuildTemporaryPointMap(maker);
             _segmentPool.EnsureCount(tempPointsMap.Count);
             
-            _railsLayout.SyncRails(maker, tempPointsMap);
-            
             for (int index = 0; index < tempPointsMap.Count; index++)
             {
                 Transform instance = _segmentPool[index].transform;
@@ -47,6 +45,9 @@ namespace Cintix.SegmentPath.Core
                 instance.position = tempPointsMap[index].Position;
                 instance.rotation = tempPointsMap[index].Rotation;
             }
+
+            _railsLayout.SyncRails(maker, tempPointsMap);
+            
         }
         
         [CanBeNull]
@@ -108,7 +109,7 @@ namespace Cintix.SegmentPath.Core
                     Vector3 rawPosition = current.Position + direction * forwardPlacement;
                     Vector3 surfaceNormal = current.Rotation * Vector3.up;
 
-                    ProjectToSurface(rawPosition, surfaceNormal, maker.RaycastLayers, out var grounded, out var normal);
+                    ProjectToSurface(rawPosition, surfaceNormal, maker, out var grounded, out var normal);
 
                     Vector3 projectedForward = Vector3.ProjectOnPlane(Vector3.forward, normal).normalized;
                     Quaternion rotation = Quaternion.LookRotation(projectedForward, normal);
@@ -123,7 +124,7 @@ namespace Cintix.SegmentPath.Core
             return map;
         }
         
-        private bool ProjectToSurface(Vector3 position, Vector3 surfaceNormal, LayerMask layers, out Vector3 groundedPosition, out Vector3 hitNormal)
+        private bool ProjectToSurface(Vector3 position, Vector3 surfaceNormal, PointMaker maker, out Vector3 groundedPosition, out Vector3 hitNormal)
         {
             const float rayOffset = 0.5f;
             const float rayDistance = 5f;
@@ -132,17 +133,33 @@ namespace Cintix.SegmentPath.Core
             Vector3 rayDirection = -surfaceNormal;
 
             Ray ray = new Ray(rayOrigin, rayDirection);
-
-            if (Physics.Raycast(ray, out RaycastHit hit, rayDistance, layers))
-            {
-                groundedPosition = hit.point;
-                hitNormal = hit.normal;
-                return true;
-            }
-
+    
+            // Få alle hits
+            RaycastHit[] hits = Physics.RaycastAll(ray, rayDistance, maker.RaycastLayers);
+    
+            float closestDistance = float.MaxValue;
+            bool foundValidHit = false;
             groundedPosition = position;
             hitNormal = surfaceNormal;
-            return false;
+    
+            // Find det nærmeste hit der IKKE er os selv eller vores børn
+            foreach (var hit in hits)
+            {
+                Transform hitTransform = hit.collider.transform;
+        
+                if (hitTransform == maker.transform || hitTransform.IsChildOf(maker.transform))
+                    continue;
+        
+                if (hit.distance < closestDistance)
+                {
+                    closestDistance = hit.distance;
+                    groundedPosition = hit.point;
+                    hitNormal = hit.normal;
+                    foundValidHit = true;
+                }
+            }
+
+            return foundValidHit;
         }
         
         private int CalculateSegmentCount(float distance, float spacing)
